@@ -1,70 +1,74 @@
 package com.example.wap
 
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Context.ALARM_SERVICE
+import android.content.Intent
 import android.os.Bundle
+import android.os.SystemClock
 import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat.getSystemService
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.wap.Notification.AlarmReceiver
+import com.example.wap.Notification.Constants.Companion.NOTIFICATION_ID
 import com.example.wap.databinding.FragmentListBinding
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.firestore.ktx.toObject
+import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
+import java.lang.Exception
 import java.util.*
 
-class ListFragment : Fragment() {
+class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
     // 뷰 바인딩 구현을 위해 null을 허용하는 FragmentListBinding 참조를 가져와야 한다.
-    private var _binding: FragmentListBinding? = null
+    private val binding by lazy{ FragmentListBinding.inflate(layoutInflater)}
     // get()은 이 속성이 'get-only'임을 나타낸다. 즉 값을 가져올 수 있지만 할당되고 나면 다른 것에 할당할 수 없다.
-    private val binding get() = _binding!!
     private lateinit var recyclerView: RecyclerView
     // Datasource 인스턴스를 만들고 이 인스턴스에서 loadMyToDoList() 메서드를 호출
     // 반환된 확인 목록을 myDataset라는 val에 저장
-    private lateinit var myDataset: MutableList<MyToDoList>
+    private val myDataset: MutableList<MyToDoList> = mutableListOf()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    private val todoCollectionRef = Firebase.firestore.collection("todo")
 
-    }
+    private lateinit var mainActivity: MainActivity
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        _binding = FragmentListBinding.inflate(inflater, container, false)
+        retrieveTodo()
         return binding.root
     }
 
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        if(context is MainActivity) mainActivity = context
+    }
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         // Inflate the layout for this fragment
-        myDataset = Datasource().loadMyToDoList()
-        recyclerView = binding.recyclerView
-        // 세로 레이아웃
-        recyclerView.layoutManager = LinearLayoutManager(context)
-        // requireContext()와 myDataset를 매개변수로 새 ListAdapter 인스턴스를 만들어
-        // ListAdapter 객체를 recyclerView의 adapter 속성에 할당
-
-        recyclerView.adapter = ListAdapter(myDataset)
-
         // 할 일 목록 추가
         binding.addButton.setOnClickListener{
             // 문자열이 입력되었을 경우 추가
-            if(binding.addTodo.text.length != 0 && binding.addDeadline.text.length != 0){
-                myDataset.add(MyToDoList(binding.addTodo.text.toString(), binding.addDeadline.text.toString()))
-                recyclerView.adapter?.notifyDataSetChanged()
-                binding.addTodo.text = null
-                binding.addDeadline.text = null
-                Toast.makeText(requireContext(), "할 일이 추가되었습니다!", Toast.LENGTH_LONG).show()
+            if(binding.addTodo.text.isNotEmpty() && binding.addDeadline.text.isNotEmpty()){
+                val deadLine = binding.addDeadline.text.toString()
+                val todoText = binding.addTodo.text.toString()
+                val todoList = MyToDoList(todoText, deadLine)
+                saveTodo(todoList)
             }
         }
-
-        // 리사이클러뷰에 drag and drop과 swipe 기능 추가
-        val itemTouchHelper = ItemTouchHelper(simpleCallback)
-        // attach recycler view to item touch helper
-        itemTouchHelper.attachToRecyclerView(recyclerView)
-
-        recyclerView.setHasFixedSize(true)
     }
 
     val simpleCallback = object : ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.START or ItemTouchHelper.END, ItemTouchHelper.RIGHT){
@@ -94,5 +98,76 @@ class ListFragment : Fragment() {
             // adaptor에게 item이 removed 되었음을 알려줌
             recyclerView.adapter?.notifyItemRemoved(position)
         }
+    }
+    private fun saveTodo(todo: MyToDoList) = CoroutineScope(Dispatchers.IO).launch {
+        Log.d("tag","?")
+        try{
+            todoCollectionRef.add(todo).await()
+            withContext(Dispatchers.Main) {
+                myDataset.add(todo)
+                Toast.makeText(requireContext(), "할 일이 추가되었습니다!", Toast.LENGTH_LONG).show()
+                recyclerView.adapter?.notifyDataSetChanged()
+                binding.addDeadline.text = null
+                binding.addTodo.text = null
+            }
+        } catch(e: Exception){
+            Log.d("tag",e.message.toString())
+        }
+    }
+    private fun retrieveTodo() = CoroutineScope(Dispatchers.IO).launch {
+        try{
+            val querySnapshot = todoCollectionRef.get().await()
+            for(document in querySnapshot.documents){
+                val todo = document.toObject<MyToDoList>()
+                todo?.let { myDataset.add(it) }
+            }
+            withContext(Dispatchers.Main){
+                recyclerView = binding.recyclerView
+                // 세로 레이아웃
+                recyclerView.layoutManager = LinearLayoutManager(context)
+                // requireContext()와 myDataset를 매개변수로 새 ListAdapter 인스턴스를 만들어
+                // ListAdapter 객체를 recyclerView의 adapter 속성에 할당
+                recyclerView.adapter = ListAdapter(this@ListFragment,myDataset)
+                // 리사이클러뷰에 drag and drop과 swipe 기능 추가
+                val itemTouchHelper = ItemTouchHelper(simpleCallback)
+                // attach recycler view to item touch helper
+                itemTouchHelper.attachToRecyclerView(recyclerView)
+
+                recyclerView.setHasFixedSize(true)
+
+            }
+        } catch(e: Exception){
+            Log.d("Tag",e.message.toString())
+        }
+    }
+
+    override fun onCheck(position: Int, isChecked: Boolean, todo: MyToDoList) {
+
+        val alarmManager = mainActivity.getSystemService(ALARM_SERVICE) as AlarmManager
+
+        val intent = Intent(mainActivity, AlarmReceiver::class.java)
+        intent.let{
+            it.putExtra("todo",todo.toDo)
+            it.putExtra("deadline",todo.deadline)
+        }
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            mainActivity, NOTIFICATION_ID , intent,
+            PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        val toastMessage = if(isChecked){
+            val time = 10000
+            val triggerTime = (SystemClock.elapsedRealtime() + time) //두가지 시간중 지금은 경과시간
+            alarmManager.setExact(
+                AlarmManager.ELAPSED_REALTIME_WAKEUP, //절전모드에서도 알람 울림
+                triggerTime,
+                pendingIntent
+            )
+            "${time/1000}후 알람 울려요 "
+        } else{
+            alarmManager.cancel(pendingIntent)
+        }
+        Toast.makeText(mainActivity, toastMessage.toString(), Toast.LENGTH_SHORT).show()
     }
 }

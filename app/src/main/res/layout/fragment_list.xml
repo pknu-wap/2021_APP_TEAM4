@@ -40,6 +40,7 @@
                 android:textSize="17dp"
                 android:layout_weight="1"
                 android:layout_marginLeft="7dp"
+                android:clickable="true"
                 android:background="@drawable/button_shape"/>
 
         </LinearLayout>
