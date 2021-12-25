@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.wap.Notification.AlarmReceiver
 import com.example.wap.Notification.Constants.Companion.NOTIFICATION_ID
 import com.example.wap.databinding.FragmentListBinding
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.ktx.Firebase
@@ -93,8 +94,11 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
         override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
             // 리스트 position
             val position = viewHolder.adapterPosition
+            //DB에서 삭제
+            deleteTodo(myDataset[position])
             // 리스트 지우기
             myDataset.remove(myDataset[position])
+
             // adaptor에게 item이 removed 되었음을 알려줌
             recyclerView.adapter?.notifyItemRemoved(position)
         }
@@ -123,24 +127,17 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
             }
             withContext(Dispatchers.Main){
                 recyclerView = binding.recyclerView
-                // 세로 레이아웃
                 recyclerView.layoutManager = LinearLayoutManager(context)
-                // requireContext()와 myDataset를 매개변수로 새 ListAdapter 인스턴스를 만들어
-                // ListAdapter 객체를 recyclerView의 adapter 속성에 할당
                 recyclerView.adapter = ListAdapter(this@ListFragment,myDataset)
-                // 리사이클러뷰에 drag and drop과 swipe 기능 추가
                 val itemTouchHelper = ItemTouchHelper(simpleCallback)
-                // attach recycler view to item touch helper
                 itemTouchHelper.attachToRecyclerView(recyclerView)
-
                 recyclerView.setHasFixedSize(true)
-
             }
         } catch(e: Exception){
             Log.d("Tag",e.message.toString())
         }
     }
-
+    //checkBox check
     override fun onCheck(position: Int, isChecked: Boolean, todo: MyToDoList) {
 
         val alarmManager = mainActivity.getSystemService(ALARM_SERVICE) as AlarmManager
@@ -169,5 +166,23 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
             alarmManager.cancel(pendingIntent)
         }
         Toast.makeText(mainActivity, toastMessage.toString(), Toast.LENGTH_SHORT).show()
+    }
+    //Todo 삭제
+    private fun deleteTodo(todo: MyToDoList) = CoroutineScope(Dispatchers.IO).launch {
+        val todoQuery = todoCollectionRef
+            .whereEqualTo("deadline", todo.deadline)
+            .whereEqualTo("toDo", todo.toDo)
+            .get()
+            .await()
+        if(todoQuery.documents.isNotEmpty()){
+            for(document in todoQuery){
+                try{
+                //todoCollectionRef.document(document.id).update(mapOf("toDo" to FieldValue.delete()))
+                    todoCollectionRef.document(document.id).delete().await()
+            }catch(e: Exception){
+                Log.d("Tag","delete error")
+                }
+            }
+        }
     }
 }
