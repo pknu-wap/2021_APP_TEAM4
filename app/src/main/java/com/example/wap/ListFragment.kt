@@ -13,15 +13,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat.getSystemService
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.wap.Notification.AlarmReceiver
 import com.example.wap.Notification.Constants.Companion.NOTIFICATION_ID
 import com.example.wap.databinding.FragmentListBinding
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.ktx.Firebase
@@ -43,6 +40,8 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
     private val myDataset: MutableList<MyToDoList> = mutableListOf()
 
     private val todoCollectionRef = Firebase.firestore.collection("todo")
+
+    private val gameCollectionRef = Firebase.firestore.collection("game")
 
     private lateinit var mainActivity: MainActivity
 
@@ -154,6 +153,9 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
         )
 
         val toastMessage = if(isChecked){
+
+            updateLevel()
+
             val time = 10000
             val triggerTime = (SystemClock.elapsedRealtime() + time) //두가지 시간중 지금은 경과시간
             alarmManager.setExact(
@@ -162,12 +164,14 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
                 pendingIntent
             )
             "${time/1000}후 알람 울려요 "
+
         } else{
             alarmManager.cancel(pendingIntent)
+            Toast.makeText(mainActivity, "알람이 취소되었습니다.", Toast.LENGTH_SHORT).show()
         }
         Toast.makeText(mainActivity, toastMessage.toString(), Toast.LENGTH_SHORT).show()
     }
-    //Todo 삭제
+    //todo 삭제
     private fun deleteTodo(todo: MyToDoList) = CoroutineScope(Dispatchers.IO).launch {
         val todoQuery = todoCollectionRef
             .whereEqualTo("deadline", todo.deadline)
@@ -177,12 +181,48 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
         if(todoQuery.documents.isNotEmpty()){
             for(document in todoQuery){
                 try{
-                //todoCollectionRef.document(document.id).update(mapOf("toDo" to FieldValue.delete()))
                     todoCollectionRef.document(document.id).delete().await()
             }catch(e: Exception){
                 Log.d("Tag","delete error")
                 }
             }
+        }
+    }
+    private fun updateLevel() = CoroutineScope(Dispatchers.IO).launch{
+
+        try{
+            val querySnapshot = gameCollectionRef.get().await()
+            for(document in querySnapshot.documents){
+                val game = document.toObject<GameData>()
+                game?.let {
+                    var nextProgress = it.progress + 50
+                    var nextLevel = it.level
+                    if(nextProgress >= 100){
+                        nextProgress -= 100
+                        nextLevel += 1
+                    }
+                    val gameQuery = gameCollectionRef
+                        .whereEqualTo("level", game.level)
+                        .whereEqualTo("progress", game.progress)
+                        .get()
+                        .await()
+                    if(gameQuery.documents.isNotEmpty()){
+                        for(document in gameQuery){
+                            try{
+                                gameCollectionRef.document(document.id).update("level", nextLevel).await()
+                                gameCollectionRef.document(document.id).update("progress", nextProgress).await()
+                            }
+                            catch(e: Exception){
+                                e.printStackTrace()
+                                Log.d("tag","update error")
+                            }
+                        }
+                    }
+                }
+            }
+        }catch(e: Exception){
+            e.printStackTrace()
+            Log.d("tag", "load data error")
         }
     }
 }
