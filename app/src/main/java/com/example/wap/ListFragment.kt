@@ -49,7 +49,7 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        retrieveTodo()
+        loadTodo()
         return binding.root
     }
 
@@ -117,7 +117,7 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
             Log.d("tag",e.message.toString())
         }
     }
-    private fun retrieveTodo() = CoroutineScope(Dispatchers.IO).launch {
+    private fun loadTodo() = CoroutineScope(Dispatchers.IO).launch {
         try{
             val querySnapshot = todoCollectionRef.get().await()
             for(document in querySnapshot.documents){
@@ -195,7 +195,7 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
             for(document in querySnapshot.documents){
                 val game = document.toObject<GameData>()
                 game?.let {
-                    var nextProgress = it.progress + 50
+                    var nextProgress = it.exp + 50
                     var nextLevel = it.level
                     if(nextProgress >= 100){
                         nextProgress -= 100
@@ -203,7 +203,7 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
                     }
                     val gameQuery = gameCollectionRef
                         .whereEqualTo("level", game.level)
-                        .whereEqualTo("progress", game.progress)
+                        .whereEqualTo("progress", game.exp)
                         .get()
                         .await()
                     if(gameQuery.documents.isNotEmpty()){
