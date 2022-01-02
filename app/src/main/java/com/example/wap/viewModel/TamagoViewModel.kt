@@ -1,6 +1,7 @@
 package com.example.wap.viewModel
 
 import android.util.Log
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.example.wap.GameData
@@ -17,10 +18,12 @@ class TamagoViewModel: ViewModel() {
 
     private val gameCollectionRef = Firebase.firestore.collection("game")
 
-    private val level: MutableLiveData<GameData> by lazy{
-        MutableLiveData<GameData>().also{
-            loadLevel()
-        }
+    private val _level = MutableLiveData<GameData>()
+
+    val level: LiveData<GameData> get() = level
+
+    init{
+        loadLevel()
     }
 
     private fun loadLevel() = CoroutineScope(Dispatchers.IO).launch{
@@ -30,7 +33,8 @@ class TamagoViewModel: ViewModel() {
             for(document in querySnapshot.documents){
                 val game = document.toObject<GameData>()
                 game?.let{
-                    level.value = game
+                    _level.postValue(it)
+                    Log.d("Tag",it.level.toString())
                 }
             }
         }catch(e: Exception){
@@ -38,50 +42,54 @@ class TamagoViewModel: ViewModel() {
             Log.d("tag", "load data error")
         }
     }
-    private fun updateLevel() = CoroutineScope(Dispatchers.IO).launch {
+    fun updateLevel() = CoroutineScope(Dispatchers.IO).launch {
 
-        level.value?.let {
-            val gameQuery = gameCollectionRef
-                .whereEqualTo("level", it.level)
-                .whereEqualTo("progress", it.exp)
-                .get()
-                .await()
+        val id = "5ErJmuvrqLCr1rOIuwB6"
 
-            if (gameQuery.documents.isNotEmpty()) {
-                for (document in gameQuery) {
-                    try {
-                        gameCollectionRef.document(document.id).update("level", levelUp().level).await()
-                        gameCollectionRef.document(document.id).update("progress", levelUp().exp)
-                            .await()
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        Log.d("tag", "update error")
-                    }
-                }
-            }
+        try {
+            loadLevel()
+            val information = levelUp()
+            gameCollectionRef.document(id).update("level", information.level).await()
+            gameCollectionRef.document(id).update("progress", information.exp).await()
+            Log.d("tag", "hello4")
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Log.d("tag", "update error")
         }
+
     }
 
     private fun levelUp() : GameData{
-        val information = level.value!!
 
-        var level = information.level
-        var exp = information.exp
+        Log.d("tag",_level.value.toString())
+
+        val information = _level.value!!
+
+        var nlevel = information.level
+        var nexp = information.exp
+
         when {
-            level in 1..9 -> {
-                exp += 500
+            nlevel in 1..9 -> {
+                nexp += 50
             }
-            level in 10..30 -> {
-                exp += 300
+            nlevel in 10..30 -> {
+                nexp += 30
             }
-            level > 30 -> {
-                exp += 200
+            nlevel > 30 -> {
+                nexp += 20
             }
         }
-        if (exp >= 1000) {
-            level += 1
-            exp -= 1000
+        if (nexp >= 100) {
+            nlevel += 1
+            nexp -= 100
         }
-        return GameData(level, exp)
+        val nGameData = GameData(nlevel,nexp)
+
+        _level.postValue(nGameData)
+
+        Log.d("tag", nlevel.toString())
+        Log.d("tag", nexp.toString())
+
+        return nGameData
     }
 }

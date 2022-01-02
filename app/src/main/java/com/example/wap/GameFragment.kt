@@ -121,7 +121,7 @@ class GameFragment : Fragment() {
                     withContext(Dispatchers.Main) {
                         game?.let {
                             gameBinding.petLevelTextView.text = "Lv ${it.level}"
-                            gameBinding.gameProgressbar.setProgress(it.progress)
+                            gameBinding.gameProgressbar.progress = it.exp
                         }
                     }
                 }

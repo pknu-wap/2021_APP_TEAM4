@@ -13,12 +13,16 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.wap.Notification.AlarmReceiver
 import com.example.wap.Notification.Constants.Companion.NOTIFICATION_ID
 import com.example.wap.databinding.FragmentListBinding
+import com.example.wap.viewModel.TamagoViewModel
+import com.example.wap.viewModel.TodoListViewModel
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.ktx.Firebase
@@ -41,7 +45,7 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
 
     private val todoCollectionRef = Firebase.firestore.collection("todo")
 
-    private val gameCollectionRef = Firebase.firestore.collection("game")
+    lateinit var tamagoViewModel: TamagoViewModel
 
     private lateinit var mainActivity: MainActivity
 
@@ -49,6 +53,9 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
+
+        tamagoViewModel = ViewModelProvider(this)[TamagoViewModel::class.java]
+
         loadTodo()
         return binding.root
     }
@@ -154,7 +161,7 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
 
         val toastMessage = if(isChecked){
 
-            updateLevel()
+            tamagoViewModel.updateLevel()
 
             val time = 10000
             val triggerTime = (SystemClock.elapsedRealtime() + time) //두가지 시간중 지금은 경과시간
@@ -186,43 +193,6 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
                 Log.d("Tag","delete error")
                 }
             }
-        }
-    }
-    private fun updateLevel() = CoroutineScope(Dispatchers.IO).launch{
-
-        try{
-            val querySnapshot = gameCollectionRef.get().await()
-            for(document in querySnapshot.documents){
-                val game = document.toObject<GameData>()
-                game?.let {
-                    var nextProgress = it.exp + 50
-                    var nextLevel = it.level
-                    if(nextProgress >= 100){
-                        nextProgress -= 100
-                        nextLevel += 1
-                    }
-                    val gameQuery = gameCollectionRef
-                        .whereEqualTo("level", game.level)
-                        .whereEqualTo("progress", game.exp)
-                        .get()
-                        .await()
-                    if(gameQuery.documents.isNotEmpty()){
-                        for(document in gameQuery){
-                            try{
-                                gameCollectionRef.document(document.id).update("level", nextLevel).await()
-                                gameCollectionRef.document(document.id).update("progress", nextProgress).await()
-                            }
-                            catch(e: Exception){
-                                e.printStackTrace()
-                                Log.d("tag","update error")
-                            }
-                        }
-                    }
-                }
-            }
-        }catch(e: Exception){
-            e.printStackTrace()
-            Log.d("tag", "load data error")
         }
     }
 }
