@@ -1,4 +1,4 @@
-package com.example.wap.Notification
+package com.example.wap.notification
 
 class Constants {
 

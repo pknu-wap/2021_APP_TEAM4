@@ -1,4 +1,4 @@
-package com.example.wap
+package com.example.wap.ui.game
 
 import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
@@ -16,9 +16,8 @@ import androidx.core.animation.addListener
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import com.example.wap.R
 import com.example.wap.databinding.FragmentGameBinding
-import com.example.wap.viewModel.GameViewModel
-import com.example.wap.viewModel.TamagoViewModel
 
 class GameFragment : Fragment() {
     private lateinit var gameBinding: FragmentGameBinding

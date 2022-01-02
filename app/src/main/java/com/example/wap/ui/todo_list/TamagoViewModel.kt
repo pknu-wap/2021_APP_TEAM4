@@ -1,11 +1,11 @@
-package com.example.wap.viewModel
+package com.example.wap.ui.todo_list
 
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.wap.GameData
+import com.example.wap.data.GameData
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.ktx.Firebase
@@ -63,7 +63,7 @@ class TamagoViewModel: ViewModel() {
 
     }
 
-    private fun levelUp() : GameData{
+    private fun levelUp() : GameData {
 
         val information = _level.value!!
 

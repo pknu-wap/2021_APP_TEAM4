@@ -1,17 +1,11 @@
-package com.example.wap
+package com.example.wap.adapter
 
-import android.app.AlarmManager
-import android.content.Context
-import android.os.SystemClock
 import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
 import android.widget.CompoundButton
-import android.widget.ImageView
-import android.widget.TextView
-import android.widget.Toast
-import androidx.appcompat.widget.SwitchCompat
 import androidx.recyclerview.widget.RecyclerView
+import com.example.wap.R
+import com.example.wap.data.MyToDoList
 import com.example.wap.databinding.ListViewBinding
 
 class ListAdapter(

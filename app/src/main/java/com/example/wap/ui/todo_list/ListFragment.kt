@@ -1,4 +1,4 @@
-package com.example.wap
+package com.example.wap.ui.todo_list
 
 import android.app.AlarmManager
 import android.app.PendingIntent
@@ -13,15 +13,16 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.wap.Notification.AlarmReceiver
-import com.example.wap.Notification.Constants.Companion.NOTIFICATION_ID
+import com.example.wap.adapter.ListAdapter
+import com.example.wap.MainActivity
+import com.example.wap.data.MyToDoList
+import com.example.wap.notification.AlarmReceiver
+import com.example.wap.notification.Constants.Companion.NOTIFICATION_ID
 import com.example.wap.databinding.FragmentListBinding
-import com.example.wap.viewModel.TamagoViewModel
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.ktx.Firebase

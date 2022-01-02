@@ -1,4 +1,4 @@
-package com.example.wap.Notification
+package com.example.wap.notification
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -12,7 +12,7 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.example.wap.MainActivity
-import com.example.wap.Notification.Constants.Companion.NOTIFICATION_ID
+import com.example.wap.notification.Constants.Companion.NOTIFICATION_ID
 import com.example.wap.R
 
 private const val CHANNEL_ID = "alarm_channel"

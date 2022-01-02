@@ -1,4 +1,4 @@
-package com.example.wap
+package com.example.wap.data
 
 data class GameData (
     val level: Int = 0,
