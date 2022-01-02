@@ -13,7 +13,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -22,7 +22,6 @@ import com.example.wap.Notification.AlarmReceiver
 import com.example.wap.Notification.Constants.Companion.NOTIFICATION_ID
 import com.example.wap.databinding.FragmentListBinding
 import com.example.wap.viewModel.TamagoViewModel
-import com.example.wap.viewModel.TodoListViewModel
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.ktx.Firebase
@@ -45,7 +44,7 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
 
     private val todoCollectionRef = Firebase.firestore.collection("todo")
 
-    lateinit var tamagoViewModel: TamagoViewModel
+     lateinit var tamagoViewModel: TamagoViewModel
 
     private lateinit var mainActivity: MainActivity
 
@@ -56,7 +55,6 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
 
         tamagoViewModel = ViewModelProvider(this)[TamagoViewModel::class.java]
 
-        loadTodo()
         return binding.root
     }
 
@@ -174,9 +172,8 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
 
         } else{
             alarmManager.cancel(pendingIntent)
-            Toast.makeText(mainActivity, "알람이 취소되었습니다.", Toast.LENGTH_SHORT).show()
         }
-        Toast.makeText(mainActivity, toastMessage.toString(), Toast.LENGTH_SHORT).show()
+        Toast.makeText(mainActivity, "알람이 취소되었습니다.", Toast.LENGTH_SHORT).show()
     }
     //todo 삭제
     private fun deleteTodo(todo: MyToDoList) = CoroutineScope(Dispatchers.IO).launch {

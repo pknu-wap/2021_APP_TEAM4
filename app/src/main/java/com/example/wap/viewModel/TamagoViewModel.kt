@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.wap.GameData
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.toObject
@@ -20,8 +21,11 @@ class TamagoViewModel: ViewModel() {
 
     private val _level = MutableLiveData<GameData>()
 
-    val level: LiveData<GameData> get() = level
+    val level: LiveData<GameData> get() = _level
 
+    fun level(): GameData? {
+        return _level.value
+    }
     init{
         loadLevel()
     }
@@ -33,8 +37,9 @@ class TamagoViewModel: ViewModel() {
             for(document in querySnapshot.documents){
                 val game = document.toObject<GameData>()
                 game?.let{
-                    _level.postValue(it)
-                    Log.d("Tag",it.level.toString())
+                    viewModelScope.launch {
+                        _level.value = it
+                    }
                 }
             }
         }catch(e: Exception){
@@ -47,11 +52,10 @@ class TamagoViewModel: ViewModel() {
         val id = "5ErJmuvrqLCr1rOIuwB6"
 
         try {
-            loadLevel()
             val information = levelUp()
+            Log.d("tag in update", information.exp.toString())
             gameCollectionRef.document(id).update("level", information.level).await()
-            gameCollectionRef.document(id).update("progress", information.exp).await()
-            Log.d("tag", "hello4")
+            gameCollectionRef.document(id).update("exp", information.exp).await()
         } catch (e: Exception) {
             e.printStackTrace()
             Log.d("tag", "update error")
@@ -60,8 +64,6 @@ class TamagoViewModel: ViewModel() {
     }
 
     private fun levelUp() : GameData{
-
-        Log.d("tag",_level.value.toString())
 
         val information = _level.value!!
 
@@ -85,11 +87,10 @@ class TamagoViewModel: ViewModel() {
         }
         val nGameData = GameData(nlevel,nexp)
 
-        _level.postValue(nGameData)
-
-        Log.d("tag", nlevel.toString())
-        Log.d("tag", nexp.toString())
-
+        viewModelScope.launch {
+            _level.value = nGameData
+        }
         return nGameData
     }
+
 }

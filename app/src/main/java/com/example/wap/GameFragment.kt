@@ -14,32 +14,36 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.core.animation.addListener
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import com.example.wap.databinding.FragmentGameBinding
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.firestore.ktx.toObject
-import com.google.firebase.ktx.Firebase
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
-import java.lang.Exception
+import com.example.wap.viewModel.GameViewModel
+import com.example.wap.viewModel.TamagoViewModel
 
 class GameFragment : Fragment() {
     private lateinit var gameBinding: FragmentGameBinding
     private var drawable: AnimationDrawable? = null // 펫 애니메이션 제어변수
     private var curPosX: Float = 0f // 애니메이션 방향을 위해 x위치 저장변수
 
-    private val gameCollectionRef = Firebase.firestore.collection("game")
-
     var handler = Handler(Looper.getMainLooper())
     var runnable = Runnable {}
+
+    lateinit var gameViewModel: GameViewModel
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
+
         gameBinding = FragmentGameBinding.inflate(inflater, container, false)
+
+        gameViewModel = ViewModelProvider(this)[GameViewModel::class.java]
+
+        gameViewModel.level.observe(viewLifecycleOwner, Observer {
+            gameBinding.petLevelTextView.text = "Lv ${it.level}"
+            gameBinding.gameProgressbar.progress = it.exp
+        })
 
         return gameBinding.root
     }
@@ -50,10 +54,9 @@ class GameFragment : Fragment() {
     }
 
     override fun onResume() {
-        super.onPause()
-        getInformation()
+        super.onResume()
+        gameViewModel.loadLevel()
     }
-
     @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -109,25 +112,5 @@ class GameFragment : Fragment() {
         }
         drawable = gameBinding.petImageView.background as AnimationDrawable
         drawable?.start()
-    }
-    private fun getInformation() = CoroutineScope(Dispatchers.IO).launch{
-
-        try{
-            val querySnapshot = gameCollectionRef.get().await()
-
-            if(querySnapshot.documents.isNotEmpty()){
-                for(document in querySnapshot.documents) {
-                    val game = document.toObject<GameData>()
-                    withContext(Dispatchers.Main) {
-                        game?.let {
-                            gameBinding.petLevelTextView.text = "Lv ${it.level}"
-                            gameBinding.gameProgressbar.progress = it.exp
-                        }
-                    }
-                }
-            }
-        } catch(e: Exception){
-            Log.d("Tag",e.message.toString())
-        }
     }
 }
