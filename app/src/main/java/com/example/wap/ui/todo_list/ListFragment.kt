@@ -20,9 +20,9 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.wap.adapter.ListAdapter
 import com.example.wap.MainActivity
 import com.example.wap.data.MyToDoList
+import com.example.wap.databinding.FragmentListBinding
 import com.example.wap.notification.AlarmReceiver
 import com.example.wap.notification.Constants.Companion.NOTIFICATION_ID
-import com.example.wap.databinding.FragmentListBinding
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.ktx.Firebase
@@ -39,15 +39,10 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
     private val binding by lazy{ FragmentListBinding.inflate(layoutInflater)}
     // get()은 이 속성이 'get-only'임을 나타낸다. 즉 값을 가져올 수 있지만 할당되고 나면 다른 것에 할당할 수 없다.
     private lateinit var recyclerView: RecyclerView
-    // Datasource 인스턴스를 만들고 이 인스턴스에서 loadMyToDoList() 메서드를 호출
-    // 반환된 확인 목록을 myDataset라는 val에 저장
-    private val myDataset: MutableList<MyToDoList> = mutableListOf()
-
-    private val todoCollectionRef = Firebase.firestore.collection("todo")
 
      lateinit var tamagoViewModel: TamagoViewModel
 
-    private lateinit var mainActivity: MainActivity
+     lateinit var todoListViewModel: TodoListViewModel
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -56,14 +51,14 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
 
         tamagoViewModel = ViewModelProvider(this)[TamagoViewModel::class.java]
 
-        return binding.root
-    }
+        todoListViewModel = ViewModelProvider(this)[TodoListViewModel::class.java]
 
-    override fun onAttach(context: Context) {
-        super.onAttach(context)
-        if(context is MainActivity) mainActivity = context
-    }
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        todoListViewModel.todoList.observe(this){ value ->
+            connectUi(value)
+        }
+
+        todoListViewModel.loadTodo()
+
         // Inflate the layout for this fragment
         // 할 일 목록 추가
         binding.addButton.setOnClickListener{
@@ -75,122 +70,45 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
                 saveTodo(todoList)
             }
         }
+        return binding.root
     }
 
-    val simpleCallback = object : ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.START or ItemTouchHelper.END, ItemTouchHelper.RIGHT){
+    val simpleCallback = object : ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP or ItemTouchHelper.DOWN
+            or ItemTouchHelper.START or ItemTouchHelper.END, ItemTouchHelper.RIGHT){
         // 리스트 아이템 위치 이동하기
         override fun onMove(
             recyclerView: RecyclerView,
             viewHolder: RecyclerView.ViewHolder,
             target: RecyclerView.ViewHolder
-        ): Boolean {
-            // drag and drop feature
-            val fromPosition = viewHolder.adapterPosition
-            val toPosition = target.adapterPosition
-            Collections.swap(myDataset, fromPosition, toPosition)
-
-            // adaptor에게 item이 이동함을 알려줌
-            recyclerView.adapter?.notifyItemMoved(fromPosition, toPosition)
-
-            return false
-        }
+        ): Boolean { return false }
 
         // 리스트 아이템 오른쪽으로 밀어 삭제하기
         override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
             // 리스트 position
             val position = viewHolder.adapterPosition
             //DB에서 삭제
-            deleteTodo(myDataset[position])
-            // 리스트 지우기
-            myDataset.remove(myDataset[position])
-
-            // adaptor에게 item이 removed 되었음을 알려줌
+            todoListViewModel.deleteTodo(position)
+            // adapter에게 item이 removed 되었음을 알려줌
             recyclerView.adapter?.notifyItemRemoved(position)
         }
     }
-    private fun saveTodo(todo: MyToDoList) = CoroutineScope(Dispatchers.IO).launch {
-        Log.d("tag","?")
-        try{
-            todoCollectionRef.add(todo).await()
-            withContext(Dispatchers.Main) {
-                myDataset.add(todo)
-                Toast.makeText(requireContext(), "할 일이 추가되었습니다!", Toast.LENGTH_LONG).show()
-                recyclerView.adapter?.notifyDataSetChanged()
-                binding.addDeadline.text = null
-                binding.addTodo.text = null
-            }
-        } catch(e: Exception){
-            Log.d("tag",e.message.toString())
-        }
-    }
-    private fun loadTodo() = CoroutineScope(Dispatchers.IO).launch {
-        try{
-            val querySnapshot = todoCollectionRef.get().await()
-            for(document in querySnapshot.documents){
-                val todo = document.toObject<MyToDoList>()
-                todo?.let { myDataset.add(it) }
-            }
-            withContext(Dispatchers.Main){
-                recyclerView = binding.recyclerView
-                recyclerView.layoutManager = LinearLayoutManager(context)
-                recyclerView.adapter = ListAdapter(this@ListFragment,myDataset)
-                val itemTouchHelper = ItemTouchHelper(simpleCallback)
-                itemTouchHelper.attachToRecyclerView(recyclerView)
-                recyclerView.setHasFixedSize(true)
-            }
-        } catch(e: Exception){
-            Log.d("Tag",e.message.toString())
-        }
+    private fun saveTodo(todo: MyToDoList) {
+        todoListViewModel.saveTodo(todo)
+        Toast.makeText(requireContext(), "할 일이 추가되었습니다!", Toast.LENGTH_LONG).show()
+        binding.addDeadline.text = null
+        binding.addTodo.text = null
     }
     //checkBox check
     override fun onCheck(position: Int, isChecked: Boolean, todo: MyToDoList) {
-
-        val alarmManager = mainActivity.getSystemService(ALARM_SERVICE) as AlarmManager
-
-        val intent = Intent(mainActivity, AlarmReceiver::class.java)
-        intent.let{
-            it.putExtra("todo",todo.toDo)
-            it.putExtra("deadline",todo.deadline)
-        }
-
-        val pendingIntent = PendingIntent.getBroadcast(
-            mainActivity, NOTIFICATION_ID , intent,
-            PendingIntent.FLAG_UPDATE_CURRENT
-        )
-
-        val toastMessage = if(isChecked){
-
-            tamagoViewModel.updateLevel()
-
-            val time = 10000
-            val triggerTime = (SystemClock.elapsedRealtime() + time) //두가지 시간중 지금은 경과시간
-            alarmManager.setExact(
-                AlarmManager.ELAPSED_REALTIME_WAKEUP, //절전모드에서도 알람 울림
-                triggerTime,
-                pendingIntent
-            )
-            "${time/1000}후 알람 울려요 "
-
-        } else{
-            alarmManager.cancel(pendingIntent)
-        }
-        Toast.makeText(mainActivity, "알람이 취소되었습니다.", Toast.LENGTH_SHORT).show()
+        tamagoViewModel.updateLevel()
     }
-    //todo 삭제
-    private fun deleteTodo(todo: MyToDoList) = CoroutineScope(Dispatchers.IO).launch {
-        val todoQuery = todoCollectionRef
-            .whereEqualTo("deadline", todo.deadline)
-            .whereEqualTo("toDo", todo.toDo)
-            .get()
-            .await()
-        if(todoQuery.documents.isNotEmpty()){
-            for(document in todoQuery){
-                try{
-                    todoCollectionRef.document(document.id).delete().await()
-            }catch(e: Exception){
-                Log.d("Tag","delete error")
-                }
-            }
-        }
+
+    private fun connectUi(value: List<MyToDoList>) {
+        recyclerView = binding.recyclerView
+        recyclerView.layoutManager = LinearLayoutManager(context)
+        recyclerView.adapter = ListAdapter(this@ListFragment,value)
+        val itemTouchHelper = ItemTouchHelper(simpleCallback)
+        itemTouchHelper.attachToRecyclerView(recyclerView)
+        recyclerView.setHasFixedSize(true)
     }
 }

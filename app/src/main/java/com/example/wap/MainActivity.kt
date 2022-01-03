@@ -8,6 +8,7 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.example.wap.databinding.ActivityMainBinding
 import com.example.wap.ui.game.GameFragment
 import com.example.wap.ui.todo_list.ListFragment
+import com.google.android.material.tabs.TabLayoutMediator
 
 class MainActivity : AppCompatActivity() {
     val binding by lazy { ActivityMainBinding.inflate(layoutInflater) }
