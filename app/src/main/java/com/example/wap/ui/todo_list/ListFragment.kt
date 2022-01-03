@@ -23,6 +23,7 @@ import com.example.wap.data.MyToDoList
 import com.example.wap.databinding.FragmentListBinding
 import com.example.wap.notification.AlarmReceiver
 import com.example.wap.notification.Constants.Companion.NOTIFICATION_ID
+import com.example.wap.ui.game.GameViewModel
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.ktx.Firebase
@@ -35,12 +36,13 @@ import java.lang.Exception
 import java.util.*
 
 class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
+
     // 뷰 바인딩 구현을 위해 null을 허용하는 FragmentListBinding 참조를 가져와야 한다.
     private val binding by lazy{ FragmentListBinding.inflate(layoutInflater)}
     // get()은 이 속성이 'get-only'임을 나타낸다. 즉 값을 가져올 수 있지만 할당되고 나면 다른 것에 할당할 수 없다.
     private lateinit var recyclerView: RecyclerView
 
-     lateinit var tamagoViewModel: TamagoViewModel
+     lateinit var gameViewModel: GameViewModel
 
      lateinit var todoListViewModel: TodoListViewModel
 
@@ -51,7 +53,7 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
 
         connectRecyclerView()
 
-        tamagoViewModel = ViewModelProvider(this)[TamagoViewModel::class.java]
+        gameViewModel = ViewModelProvider(this)[GameViewModel::class.java]
 
         todoListViewModel = ViewModelProvider(this)[TodoListViewModel::class.java]
 
@@ -100,7 +102,7 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
     }
     //checkBox check
     override fun onCheck(position: Int, isChecked: Boolean, todo: MyToDoList) {
-        tamagoViewModel.updateLevel()
+        gameViewModel.updateLevel()
     }
 
     private fun connectRecyclerView() {

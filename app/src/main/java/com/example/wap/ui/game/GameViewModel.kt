@@ -44,4 +44,49 @@ class GameViewModel: ViewModel() {
             Log.d("tag", "load data error")
         }
     }
+    fun updateLevel() = CoroutineScope(Dispatchers.IO).launch {
+
+        val id = "5ErJmuvrqLCr1rOIuwB6"
+
+        try {
+            val information = levelUp()
+            Log.d("tag in update", information.exp.toString())
+            gameCollectionRef.document(id).update("level", information.level).await()
+            gameCollectionRef.document(id).update("exp", information.exp).await()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Log.d("tag", "update error")
+        }
+
+    }
+
+    private fun levelUp() : GameData {
+
+        val information = _level.value!!
+
+        var nlevel = information.level
+        var nexp = information.exp
+
+        when {
+            nlevel in 1..9 -> {
+                nexp += 50
+            }
+            nlevel in 10..30 -> {
+                nexp += 30
+            }
+            nlevel > 30 -> {
+                nexp += 20
+            }
+        }
+        if (nexp >= 100) {
+            nlevel += 1
+            nexp -= 100
+        }
+        val nGameData = GameData(nlevel,nexp)
+
+        viewModelScope.launch {
+            _level.value = nGameData
+        }
+        return nGameData
+    }
 }
