@@ -49,12 +49,14 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
         savedInstanceState: Bundle?
     ): View? {
 
+        connectRecyclerView()
+
         tamagoViewModel = ViewModelProvider(this)[TamagoViewModel::class.java]
 
         todoListViewModel = ViewModelProvider(this)[TodoListViewModel::class.java]
 
         todoListViewModel.todoList.observe(this){ value ->
-            connectUi(value)
+            recyclerView.adapter = ListAdapter(this@ListFragment,value)
         }
 
         todoListViewModel.loadTodo()
@@ -88,8 +90,6 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
             val position = viewHolder.adapterPosition
             //DB에서 삭제
             todoListViewModel.deleteTodo(position)
-            // adapter에게 item이 removed 되었음을 알려줌
-            recyclerView.adapter?.notifyItemRemoved(position)
         }
     }
     private fun saveTodo(todo: MyToDoList) {
@@ -103,10 +103,9 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
         tamagoViewModel.updateLevel()
     }
 
-    private fun connectUi(value: List<MyToDoList>) {
+    private fun connectRecyclerView() {
         recyclerView = binding.recyclerView
         recyclerView.layoutManager = LinearLayoutManager(context)
-        recyclerView.adapter = ListAdapter(this@ListFragment,value)
         val itemTouchHelper = ItemTouchHelper(simpleCallback)
         itemTouchHelper.attachToRecyclerView(recyclerView)
         recyclerView.setHasFixedSize(true)
