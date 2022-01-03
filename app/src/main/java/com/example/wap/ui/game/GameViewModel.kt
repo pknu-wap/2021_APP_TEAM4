@@ -6,18 +6,22 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.wap.data.GameData
+import com.example.wap.repository.GameRepository
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.ktx.Firebase
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.lang.Exception
+import javax.inject.Inject
 
-class GameViewModel: ViewModel() {
-
-    private val gameCollectionRef = Firebase.firestore.collection("game")
+@HiltViewModel
+class GameViewModel @Inject constructor(
+    private val gameRepository: GameRepository
+): ViewModel() {
 
     private val _level = MutableLiveData<GameData>()
 
@@ -27,37 +31,15 @@ class GameViewModel: ViewModel() {
         loadLevel()
     }
 
-    fun loadLevel() = CoroutineScope(Dispatchers.IO).launch{
-
-        try{
-            val querySnapshot = gameCollectionRef.get().await()
-            for(document in querySnapshot.documents){
-                val game = document.toObject<GameData>()
-                game?.let{
-                    viewModelScope.launch {
-                        _level.value = it
-                    }
-                }
-            }
-        }catch(e: Exception){
-            e.printStackTrace()
-            Log.d("tag", "load data error")
+    fun loadLevel(){
+        viewModelScope.launch {
+            _level.value =  gameRepository.loadLevel()
         }
     }
-    fun updateLevel() = CoroutineScope(Dispatchers.IO).launch {
-
-        val id = "5ErJmuvrqLCr1rOIuwB6"
-
-        try {
-            val information = levelUp()
-            Log.d("tag in update", information.exp.toString())
-            gameCollectionRef.document(id).update("level", information.level).await()
-            gameCollectionRef.document(id).update("exp", information.exp).await()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Log.d("tag", "update error")
+    fun updateLevel() {
+        viewModelScope.launch {
+            gameRepository.updateLevel(levelUp())
         }
-
     }
 
     private fun levelUp() : GameData {

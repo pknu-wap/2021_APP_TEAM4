@@ -27,6 +27,7 @@ import com.example.wap.ui.game.GameViewModel
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.ktx.Firebase
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -35,6 +36,7 @@ import kotlinx.coroutines.withContext
 import java.lang.Exception
 import java.util.*
 
+@AndroidEntryPoint
 class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
 
     // 뷰 바인딩 구현을 위해 null을 허용하는 FragmentListBinding 참조를 가져와야 한다.
@@ -61,7 +63,7 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
             recyclerView.adapter = ListAdapter(this@ListFragment,value)
         }
 
-        todoListViewModel.loadTodo()
+        todoListViewModel.getTodos()
 
         // Inflate the layout for this fragment
         // 할 일 목록 추가
@@ -95,7 +97,7 @@ class ListFragment : Fragment(), ListAdapter.onCheckedChangeListener {
         }
     }
     private fun saveTodo(todo: MyToDoList) {
-        todoListViewModel.saveTodo(todo)
+        todoListViewModel.insertTodo(todo)
         Toast.makeText(requireContext(), "할 일이 추가되었습니다!", Toast.LENGTH_LONG).show()
         binding.addDeadline.text = null
         binding.addTodo.text = null

@@ -9,7 +9,9 @@ import com.example.wap.databinding.ActivityMainBinding
 import com.example.wap.ui.game.GameFragment
 import com.example.wap.ui.todo_list.ListFragment
 import com.google.android.material.tabs.TabLayoutMediator
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     val binding by lazy { ActivityMainBinding.inflate(layoutInflater) }
     override fun onCreate(savedInstanceState: Bundle?) {

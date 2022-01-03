@@ -18,7 +18,9 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.example.wap.R
 import com.example.wap.databinding.FragmentGameBinding
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class GameFragment : Fragment() {
     private lateinit var gameBinding: FragmentGameBinding
     private var drawable: AnimationDrawable? = null // 펫 애니메이션 제어변수
